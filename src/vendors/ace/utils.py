@@ -32,10 +32,18 @@ def initialize_clients(api_provider):
         api_key = os.getenv("OPENAI_API_KEY", "")
         if not api_key:
             raise ValueError("OpenAI api key not found in environment variables")
+    elif api_provider == "anthropic":
+        # Use Anthropic's OpenAI-compatible endpoint. Note: response_format is
+        # silently ignored there, so use_json_mode degrades to in-prompt JSON
+        # instructions (extract_answer's regex fallbacks handle this).
+        base_url = "https://api.anthropic.com/v1/"
+        api_key = os.getenv("ANTHROPIC_API_KEY", "")
+        if not api_key:
+            raise ValueError("Anthropic api key not found in environment variables")
     else:
         raise ValueError(
             (
-                f"Invalid api_provider name: {api_provider}. Must be 'sambanova', 'together', or 'openai'"
+                f"Invalid api_provider name: {api_provider}. Must be 'sambanova', 'together', 'openai', or 'anthropic'"
             )
         )
 
