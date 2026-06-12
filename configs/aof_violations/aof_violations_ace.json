@@ -10,7 +10,8 @@
   "task": {
     "name": "aof_violations",
     "params": {
-      "schedule": "standard"
+      "schedule": "standard",
+      "num_instances": 25
     }
   }
 }

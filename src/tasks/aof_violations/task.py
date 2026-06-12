@@ -74,7 +74,7 @@ class AOFViolationsTask(ContinualLearningTask):
 
     r_max: ClassVar[float] = 1.0
 
-    def __init__(self, num_instances: int = 15, schedule: Optional[str] = None, **kwargs):
+    def __init__(self, num_instances: int = 25, schedule: Optional[str] = None, **kwargs):
         self.num_instances = num_instances
         self.schedule = schedule
         self._index: int = 0
@@ -89,7 +89,8 @@ class AOFViolationsTask(ContinualLearningTask):
     def description(self) -> str:
         return (
             "Agentic governance violation detection: "
-            "read-before-acting, checkpoint theater, and fabrication across 15 scenarios"
+            "read-before-acting, checkpoint theater, fabrication, "
+            "completeness claims, and deploy verification across 25 scenarios"
         )
 
     def build_canonical_run_state(self) -> None:

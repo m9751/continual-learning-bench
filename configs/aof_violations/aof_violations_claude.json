@@ -4,7 +4,7 @@
     "name": "claude",
     "params": {
       "model": "claude-sonnet-4-6",
-      "seed_memory_dir": "C:\\Users\\mbusa\\.claude\\memory",
+      "seed_memory_dir": "C:\\Users\\mbusa\\.claude\\benchmark-seed",
       "reasoning_effort": "low",
       "single_conversation": true
     }
@@ -12,6 +12,7 @@
   "task": {
     "name": "aof_violations",
     "params": {
+      "num_instances": 25,
       "schedule": "standard"
     }
   }
