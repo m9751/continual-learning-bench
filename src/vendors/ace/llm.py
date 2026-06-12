@@ -45,7 +45,10 @@ def _build_api_params(
     if extra_api_params:
         api_params.update(extra_api_params)
 
-    if use_json_mode:
+    # Anthropic's OpenAI-compat endpoint rejects response_format json_object
+    # (400: "Input should be 'json_schema'") — rely on in-prompt JSON
+    # instructions there; extract_answer's regex fallbacks handle drift.
+    if use_json_mode and api_provider != "anthropic":
         api_params["response_format"] = {"type": "json_object"}
 
     return api_params
