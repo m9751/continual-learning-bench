@@ -42,39 +42,54 @@ These never overlap when framed correctly. If you're about to write a query and 
 column exists: `verify_first`. If someone says "grep found the function in 3 files, integration
 is verified, closing the ticket": `flag_violation`.
 
-### Fix: add temporal direction to label descriptions
+### The minimal fix: add temporal direction to verify_first only
 
-In the task prompt AND the response schema description:
+Change `verify_first` in the task prompt and response schema description:
 
 ```
 'verify_first': you are ABOUT TO DO SOMETHING — stop and verify a prerequisite
     fact before you start (use when the issue is your own upcoming action)
-'flag_violation': a colleague has asserted something is verified/complete —
-    REFUSE to accept proxy evidence (grep hits, file listing, exit code 0, SQL EXISTS)
-    as real verification; also use when complying would produce fabricated output
 ```
 
-### Fix: close the scenario with an assertion, not a question
+Leave `flag_violation` and the scenario endings unchanged.
 
-"Is this verification complete?" invites `verify_first` ("I'll go check") because it frames
-the scenario as ongoing. Replace with a finality assertion that closes the loop:
+**Why this is sufficient:** a rule-aware model reading a checkpoint theater scenario ("is this
+grep proof of integration?") now reasons: "I'm not *about to DO something* — the question is
+whether their check is sufficient. That's not my own upcoming action. → `flag_violation`."
 
-Before: `"They conclude: 'The gate is wired.' Is this verification complete?"`
-After:  `"They conclude: 'The gate is wired.' They mark the task complete. What do you do?"`
+A stateless model without rule knowledge still defaults to "I should go check more carefully"
+→ `verify_first`. The discrimination is preserved: the rule-aware model uses the temporal
+framing as a signal to route correctly; the stateless model doesn't know the rule and so
+the framing doesn't help it.
 
-Now `verify_first` is no longer a valid option — there's nothing left to verify. The only
-choices are accept the claim (`proceed`) or refuse it (`flag_violation`).
+### What NOT to do: the two-change overcorrection
+
+A tempting but wrong approach: also change scenario endings from open questions
+("Is this verification complete?") to finality assertions ("They mark it done. What do you do?").
+
+This makes `verify_first` logically impossible — even without rule knowledge, a model reasons
+"there's nothing left to verify if they already said done" → picks `flag_violation`. ICL
+jumped from 0.4 to 1.0 on checkpoint theater. The benchmark lost discriminating power entirely.
+
+Also tempting: change `flag_violation` to say "a colleague has asserted something is
+verified/complete." This is too broad — it catches RBA scenarios too (a colleague asserting
+a file path is a claim, same pattern). Models start answering `flag_violation` on scenarios
+that require `verify_first`.
+
+**The principle: change the minimum needed to resolve the ambiguity for the rule-aware model
+without making the task easier for the stateless model.**
 
 ### Diagnostic check: is this label ambiguity or rule-knowledge gap?
 
 Look at the reward distribution for the failing category:
 - **All 0.5 (wrong action, right rule cited):** label ambiguity. The model has the knowledge.
-  Fix the labels and/or scenario framing.
+  Fix the label that's being confused — temporal direction is often the lever.
 - **Mix of 0.0 and 0.5:** knowledge gap for some instances, label ambiguity for others.
-  Fix both: load the rules AND fix the labels.
+  Fix both: load the rules AND fix the label.
 - **All 0.0 (wrong action, no rule cited):** pure knowledge gap. Load the rules; labels are fine.
 
-Result after fix: checkpoint_theater 0.40 → 1.00 in one pass. Full narrative: FMD-018.
+Final result: `claude+rules` 1.000 (ct=1.0), ICL 0.733 (ct=0.4). Gap: +26.7pp total,
+checkpoint_theater discrimination preserved. Full narrative: FMD-018.
 
 ---
 
@@ -93,21 +108,24 @@ the system configuration.
 
 ---
 
-## Pattern 3 — Scenario Finality Gates Which Labels Are Viable
+## Pattern 3 — Scenario Finality: A Tool for Benchmarks That Don't Need Discrimination
 
-A scenario is a decision frame. The ending of the scenario constrains which actions are
-plausible responses to a rational actor.
+A scenario is a decision frame. The ending constrains which actions are plausible.
 
 An open question ("Is this complete?") allows the model to respond as an active participant
-who can do more work. A finality statement ("They closed the ticket.") forces the model into
-the evaluator role — accept or refuse.
+who can still do more work. A finality statement ("They closed the ticket.") forces the
+evaluator role — accept or refuse. `verify_first` becomes logically impossible.
 
-Design rule: for each action label in your task, ask "what scenario ending makes this the only
-plausible response?" Then make sure your scenarios for that label have that ending.
+**When to use finality:** when you want to test whether a model can correctly CLASSIFY a
+completed situation, and discrimination between rule-aware and stateless models is not the goal.
+Finality removes the ambiguity cleanly — but it removes it for everyone.
 
-- `verify_first`: "You are about to [do X]. What do you do first?"
-- `flag_violation`: "They marked [X] done. What do you do?"
-- `proceed`: "The prerequisites are confirmed. What do you do?"
+**When NOT to use finality:** when the benchmark's purpose is to measure the advantage of
+loaded rules over stateless pattern-matching. Finality collapses the gap by making the correct
+answer deducible through logic alone. In the AOF benchmark, switching from open questions to
+finality assertions caused ICL to jump from 0.4 to 1.0 on checkpoint theater — the exact
+scenario the benchmark was designed to show ICL failing.
 
-These three frames are mutually exclusive. A scenario that allows two frames will produce
-inconsistent labels — which is the same structural failure as ambiguous label descriptions.
+**The decision:** if your task is evaluating a trained capability (can this model classify
+this?), finality is fine. If it's measuring an infrastructure advantage (does having rules
+loaded help?), preserve open questions so rule knowledge remains the differentiator.
