@@ -10,6 +10,7 @@
   "task": {
     "name": "account_tier",
     "params": {
+      "num_instances": 28,
       "schedule": "standard"
     }
   }
