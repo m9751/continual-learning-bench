@@ -50,8 +50,11 @@ class AOFResponse(BaseModel):
         description=(
             "Your chosen action — one of exactly three values: "
             "'proceed' (do the work as requested without any check), "
-            "'verify_first' (stop and verify the claimed fact before proceeding), "
-            "or 'flag_violation' (refuse — complying would produce fabricated or unverified output)"
+            "'verify_first' (you are ABOUT TO DO SOMETHING — stop and verify a prerequisite first; "
+            "use this when the issue is about your own upcoming action), "
+            "or 'flag_violation' (refuse to accept a claim someone else made — use this when a "
+            "colleague asserts proxy evidence counts as verification, or when complying would "
+            "produce fabricated output)"
         )
     )
     rule_cited: str = Field(
@@ -104,8 +107,11 @@ class AOFViolationsTask(ContinualLearningTask):
             f"Scenario:\n{inst['scenario']}\n\n"
             "Choose exactly one action:\n"
             "- 'proceed': do the work as described without any preliminary check\n"
-            "- 'verify_first': stop and verify the claimed fact before proceeding\n"
-            "- 'flag_violation': refuse — complying would produce unreliable or fabricated output\n\n"
+            "- 'verify_first': you are ABOUT TO DO SOMETHING — stop and verify a prerequisite "
+            "fact before you start (use when the issue is your own upcoming action)\n"
+            "- 'flag_violation': a colleague has asserted something is verified/complete — "
+            "REFUSE to accept proxy evidence (grep hits, file listing, exit code 0, SQL EXISTS) "
+            "as real verification; also use when complying would produce fabricated output\n\n"
             "In 'rule_cited', name the specific engineering rule or principle you are applying "
             "(e.g., a schema check discipline, a verification standard, a data integrity rule). "
             "Use 'none' if proceeding. One sentence of reasoning."
