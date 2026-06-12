@@ -22,18 +22,37 @@ class AOFViolationsTests(unittest.TestCase):
         with _FIXTURES_PATH.open(encoding="utf-8") as fh:
             self.fixtures = json.load(fh)
 
-    def test_fixtures_shape(self):
-        self.assertEqual(len(self.fixtures), 25)
-        counts: dict[str, int] = {}
-        for inst in self.fixtures:
-            cat = inst["violation_category"]
-            counts[cat] = counts.get(cat, 0) + 1
-        self.assertEqual(set(counts), _EXPECTED_CATEGORIES)
+    def test_fixtures_tier_counts(self):
+        self.assertEqual(len(self.fixtures), 35)
+        tier_a = [f for f in self.fixtures if f.get("tier", "A") == "A"]
+        tier_b = [f for f in self.fixtures if f.get("tier") == "B"]
+        self.assertEqual(len(tier_a), 25)
+        self.assertEqual(len(tier_b), 10)
+        b_counts: dict[str, int] = {}
+        for inst in tier_b:
+            b_counts[inst["violation_category"]] = b_counts.get(inst["violation_category"], 0) + 1
         for cat in _EXPECTED_CATEGORIES:
-            self.assertEqual(counts[cat], 5, f"{cat} should have 5 instances")
+            self.assertEqual(b_counts.get(cat, 0), 2, f"Tier B {cat} should have 2 instances")
+
+    def test_schedule_standard(self):
+        task = AOFViolationsTask(num_instances=25, schedule="standard")
+        task.build_canonical_run_state()
+        self.assertEqual(len(task.instances), 25)
+        self.assertTrue(all(i.get("tier", "A") == "A" for i in task.instances))
+
+    def test_schedule_tier_b(self):
+        task = AOFViolationsTask(num_instances=10, schedule="tier_b")
+        task.build_canonical_run_state()
+        self.assertEqual(len(task.instances), 10)
+        self.assertTrue(all(i.get("tier") == "B" for i in task.instances))
+
+    def test_schedule_full(self):
+        task = AOFViolationsTask(num_instances=35, schedule="full")
+        task.build_canonical_run_state()
+        self.assertEqual(len(task.instances), 35)
 
     def test_scoring_exact_match(self):
-        task = AOFViolationsTask(num_instances=1)
+        task = AOFViolationsTask(num_instances=1, schedule="standard")
         task.build_canonical_run_state()
         inst = task.instances[0]
         response = Response(
@@ -48,7 +67,7 @@ class AOFViolationsTests(unittest.TestCase):
         self.assertEqual(result.instance_outcome.reward, 1.0)
 
     def test_scoring_partial_credit(self):
-        task = AOFViolationsTask(num_instances=1)
+        task = AOFViolationsTask(num_instances=1, schedule="standard")
         task.build_canonical_run_state()
         inst = task.instances[0]
         wrong_action = "proceed" if inst["correct_action"] != "proceed" else "verify_first"
@@ -67,17 +86,16 @@ class AOFViolationsTests(unittest.TestCase):
         schema_desc = AOFResponse.model_fields["action"].description or ""
         self.assertIn("ABOUT TO DO SOMETHING", schema_desc)
 
-        task = AOFViolationsTask(num_instances=1)
+        task = AOFViolationsTask(num_instances=1, schedule="standard")
         task.build_canonical_run_state()
         query: Query = task.build_current_query()
         self.assertIn("ABOUT TO DO SOMETHING", query.prompt)
 
     def test_category_actions(self):
+        tier_a = [f for f in self.fixtures if f.get("tier", "A") == "A"]
         by_category: dict[str, list[str]] = {}
-        for inst in self.fixtures:
-            by_category.setdefault(inst["violation_category"], []).append(
-                inst["correct_action"]
-            )
+        for inst in tier_a:
+            by_category.setdefault(inst["violation_category"], []).append(inst["correct_action"])
 
         for action in by_category["read_before_acting"]:
             self.assertEqual(action, "verify_first")
