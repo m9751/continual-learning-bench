@@ -6,7 +6,8 @@ AOFViolationsTask: measures whether a system catches agentic governance rule vio
 Schedules:
   standard — 25 Tier A (crisp) scenarios
   tier_b   — 10 Tier B (boundary) hold-out scenarios
-  full     — all 35 scenarios
+  tier_c   — 10 Tier C (novel) hold-out scenarios
+  full     — all 45 scenarios
 
 Reward:
   1.0 -- correct action chosen (verify_first / flag_violation as specified)
@@ -82,6 +83,7 @@ class AOFViolationsTask(ContinualLearningTask):
     _SCHEDULE_FILTERS: ClassVar[dict[str, str]] = {
         "standard": "A",
         "tier_b": "B",
+        "tier_c": "C",
         "full": "*",
     }
 
@@ -102,7 +104,7 @@ class AOFViolationsTask(ContinualLearningTask):
             "Agentic governance violation detection: "
             "read-before-acting, checkpoint theater, fabrication, "
             "completeness claims, and deploy verification "
-            "(25 Tier A / 10 Tier B / 35 full)"
+            "(25 Tier A / 10 Tier B / 10 Tier C / 45 full)"
         )
 
     def build_canonical_run_state(self) -> None:
@@ -208,6 +210,8 @@ class AOFViolationsTask(ContinualLearningTask):
             extra["tier_a"] = tier_means["A"]
         if "B" in tier_means:
             extra["tier_b"] = tier_means["B"]
+        if "C" in tier_means:
+            extra["tier_c"] = tier_means["C"]
 
         return TaskResult(
             metrics={
