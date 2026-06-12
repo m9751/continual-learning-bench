@@ -5,7 +5,7 @@
     "params": {
       "model": "claude-fable-5",
       "seed_memory_dir": "C:\\Users\\mbusa\\.claude\\benchmark-seed-account-tier-v2",
-      "reasoning_effort": "low",
+      "reasoning_effort": "high",
       "single_conversation": true
     }
   },
