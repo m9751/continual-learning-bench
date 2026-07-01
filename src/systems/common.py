@@ -93,9 +93,9 @@ def _read_skill_location(location: str | Path) -> tuple[str, str, Path | None]:
             )
         default_name = path.name
         source_dir = path
-        contents = skill_file.read_text()
+        contents = skill_file.read_text(encoding="utf-8")
     elif path.is_file():
-        contents = path.read_text()
+        contents = path.read_text(encoding="utf-8")
         if path.name == _SKILL_STANDARD_FILE:
             default_name = path.parent.name
             source_dir = path.parent
@@ -215,7 +215,7 @@ def read_memory_snapshot(
                 continue
             rel = path.relative_to(host_dir).as_posix()
             try:
-                snapshot[rel] = path.read_text()
+                snapshot[rel] = path.read_text(encoding="utf-8")
             except (OSError, UnicodeDecodeError) as exc:
                 logger.warning("Could not read memory file %s: %s", path, exc)
     return snapshot
@@ -302,7 +302,7 @@ def read_other_memory_files(
                 )
                 continue
             try:
-                snapshot[rel] = resolved.read_text()
+                snapshot[rel] = resolved.read_text(encoding="utf-8")
             except (OSError, UnicodeDecodeError) as exc:
                 logger.warning("Could not read other memory file %s: %s", resolved, exc)
     return snapshot

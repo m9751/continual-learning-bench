@@ -305,7 +305,7 @@ class ClaudeCodeSystem(ContinualLearningSystem):
         path = Path(preamble_file).expanduser().resolve()
         if not path.is_file():
             raise FileNotFoundError(f"preamble_file does not exist: {path}")
-        return path.read_text()
+        return path.read_text(encoding="utf-8")
 
     def _start_container(self) -> None:
         """Start a persistent Docker container with claude installed."""
@@ -348,6 +348,7 @@ class ClaudeCodeSystem(ContinualLearningSystem):
         """Create Claude's config dir skeleton and seed memory if configured."""
         self.memory_dir.mkdir(parents=True, exist_ok=True)
         copy_memory_seed(self._seed_memory_dir, self.memory_dir)
+        self._copy_seed_claude_md()
         self._skill_prompt_prefix = load_skill_prompt_prefix(
             self._skill,
             agent_name="claude",
@@ -379,6 +380,22 @@ class ClaudeCodeSystem(ContinualLearningSystem):
             / _CLAUDE_PROJECT_SLUG
             / "memory"
         )
+
+    def _copy_seed_claude_md(self) -> None:
+        """Seed the container's global CLAUDE.md, if the seed dir has one.
+
+        ``copy_memory_seed`` only populates the memory subdirectory; Claude Code
+        reads global instructions from ``$CLAUDE_CONFIG_DIR/CLAUDE.md``, i.e.
+        ``{tmp_dir}/.claude/CLAUDE.md`` on the host side.
+        """
+        if self._seed_memory_dir is None:
+            return
+        seed_claude_md = self._seed_memory_dir / "CLAUDE.md"
+        if not seed_claude_md.is_file():
+            return
+        claude_config_root = Path(self._tmp_dir) / ".claude"
+        claude_config_root.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(seed_claude_md, claude_config_root / "CLAUDE.md")
 
     def _read_native_memory_snapshot(self) -> dict[str, str]:
         """Read Claude memory files from all known project memory dirs."""
