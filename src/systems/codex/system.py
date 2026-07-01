@@ -465,7 +465,7 @@ class CodexSystem(ContinualLearningSystem):
         path = Path(preamble_file).expanduser().resolve()
         if not path.is_file():
             raise FileNotFoundError(f"preamble_file does not exist: {path}")
-        return path.read_text()
+        return path.read_text(encoding="utf-8")
 
     def _initialize_workspace(self) -> None:
         """Create Codex home and install optional native skill files."""
